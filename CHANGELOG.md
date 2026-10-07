@@ -12,6 +12,11 @@ releases may include breaking changes.
 
 ## [1.0.0] - 2026-10-14
 
+### Added
+
+- ✨ Integrate IBM workloads with MQT Core's shared Slurm deployment and
+  native/wheel integration fixture.
+
 ### Fixed
 
 - 🐛 Select calibrated layouts for live quantum checks. ([#66])
