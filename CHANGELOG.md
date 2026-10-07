@@ -10,6 +10,11 @@ releases may include breaking changes.
 
 ## [Unreleased]
 
+### Added
+
+- ✨ Integrate IBM workloads with MQT Core's shared Slurm deployment and
+  native/wheel integration fixture.
+
 ### Fixed
 
 - 🐛 Ship license texts for libcurl, cpr, nlohmann/json, and OpenSSL bundled in
