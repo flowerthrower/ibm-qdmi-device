@@ -179,7 +179,7 @@ jobs:
   slurm-tests:
     name: Slurm
     needs: change-detection
-    if: github.ref == 'refs/heads/main' || fromJSON(needs.change-detection.outputs.run-cpp-tests)
+    if: github.ref == 'refs/heads/main' || fromJSON(needs.change-detection.outputs.run-cpp-tests) || fromJSON(needs.change-detection.outputs.run-python-tests)
     uses: $/.github/workflows/cpp-slurm-tests.yml
   documentation:
     name: 📚 Documentation
@@ -213,7 +213,11 @@ jobs:
           allowed-skips: >-
             ${{
               github.ref != 'refs/heads/main' && needs.change-detection.outputs.run-cpp-tests == 'false'
-              && 'cpp-tests-ubuntu,cpp-tests-macos,cpp-tests-windows,cpp-install-tests,cpp-sanitizers,cpp-coverage,slurm-tests,' || ''
+              && 'cpp-tests-ubuntu,cpp-tests-macos,cpp-tests-windows,cpp-install-tests,cpp-sanitizers,cpp-coverage,' || ''
+            }}
+            ${{
+              github.ref != 'refs/heads/main' && needs.change-detection.outputs.run-cpp-tests == 'false' && needs.change-detection.outputs.run-python-tests == 'false'
+              && 'slurm-tests,' || ''
             }}
             ${{
               github.ref != 'refs/heads/main' && needs.change-detection.outputs.run-cpp-linter == 'false'
