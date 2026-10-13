@@ -14,8 +14,8 @@ releases may include breaking changes.
 
 ### Added
 
-- ✨ Integrate IBM workloads with MQT Core's shared Slurm deployment and
-  native/wheel integration fixture. ([#62]) ([**@flowerthrower**])
+- ✨ Add a QDMI Slurm guide and an offline cluster smoke test. ([#62])
+  ([**@flowerthrower**], [**@burgholzer**])
 
 ### Fixed
 
@@ -60,10 +60,10 @@ _This is the initial release of the IBM QDMI Device._
 <!-- PR links -->
 
 [#66]: https://github.com/munich-quantum-software/ibm-qdmi-device/pull/66
-[#63]: https://github.com/munich-quantum-software/ibm-qdmi-device/pull/63
 [#59]: https://github.com/munich-quantum-software/ibm-qdmi-device/pull/59
 [#60]: https://github.com/munich-quantum-software/ibm-qdmi-device/pull/60
 [#62]: https://github.com/munich-quantum-software/ibm-qdmi-device/pull/62
+[#63]: https://github.com/munich-quantum-software/ibm-qdmi-device/pull/63
 
 <!-- Version links -->
 
@@ -75,9 +75,9 @@ _This is the initial release of the IBM QDMI Device._
 <!-- Contributor -->
 
 [**@burgholzer**]: https://github.com/burgholzer
-[**@marcelwa**]: https://github.com/marcelwa
 [**@denialhaag**]: https://github.com/denialhaag
 [**@flowerthrower**]: https://github.com/flowerthrower
+[**@marcelwa**]: https://github.com/marcelwa
 
 <!-- General links -->
 

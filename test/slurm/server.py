@@ -15,7 +15,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-"""Run the existing synthetic IBM runtime on each Slurm fixture node."""
+"""Run the existing synthetic IBM runtime on Slurm controller and quantum access nodes."""
 
 import os
 import socket
@@ -27,6 +27,7 @@ from qiskit_service import configure
 if __name__ == "__main__":
     with serve(address=("127.0.0.1", 18080)) as service:
         configure(service)
+        service.data["configuration"]["backend_name"] = "ibm_berlin"
         with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as notification:
             notification.sendto(b"READY=1", os.environ["NOTIFY_SOCKET"])
         Event().wait()

@@ -15,26 +15,29 @@
 #
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-"""Exercise IBM adapters with the handle selected by Core's Slurm integration."""
+"""Exercise IBM adapters with the device allocated by Slurm."""
 
 from __future__ import annotations
 
 import os
-from unittest.mock import patch
+from pathlib import Path
 
 import pennylane as qml
-import pytest
-from provider_probe import open_device_from_license  # ty: ignore[unresolved-import]
+from mqt.core.qdmi import builtin_driver as qdmi_driver
 from qiskit import QuantumCircuit
 
+from ibm.qdmi import IBM_QDMI_LIBRARY_PATH
 from ibm.qdmi.pennylane import IBMDevice
 from ibm.qdmi.qiskit import IBMBackend
 
 
 def main() -> None:
     """Submit and retrieve synthetic results through the selected native library."""
-    device = open_device_from_license()
-    assert device.name() == "ibm_test"
+    # This workload requests one local Slurm license with count one.
+    device_id = os.environ["SLURM_JOB_LICENSES"].removesuffix(":1")
+    device = qdmi_driver.open_device(device_id)
+    assert str(IBM_QDMI_LIBRARY_PATH.resolve()) in Path("/proc/self/maps").read_text(encoding="utf-8")
+    assert device.name() == "ibm_berlin"
     assert device.qubits_num() == 5
     backend = IBMBackend(device=device)
     circuit = QuantumCircuit(2, 2)
@@ -54,8 +57,6 @@ def main() -> None:
         return qml.counts(wires=[0, 1])
 
     assert sample() == {"11": 8}
-    with patch.dict(os.environ, {"IBM_QUANTUM_API_KEY": ""}), pytest.raises(RuntimeError):
-        open_device_from_license()
 
 
 if __name__ == "__main__":

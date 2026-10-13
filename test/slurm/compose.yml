@@ -15,16 +15,21 @@
 #
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-x-provider-build: &provider-build
-  args:
-    PROVIDER_INSTALL_MODE: ${PROVIDER_INSTALL_MODE:-native}
-    PROVIDER_RUNTIME_COMPONENT: ibm-qdmi-device_Runtime
-    SETUP_SCRIPT: test/slurm/setup.sh
+x-device-environment: &device-environment
+  - ${MQT_CORE_SLURM_WORKLOAD:?Set the IBM source directory}/test/slurm/qdmi.env
+
+x-service: &service
+  - ${MQT_CORE_SLURM_WORKLOAD:?Set the IBM source directory}/test/slurm/ibm-fixture.service:/etc/systemd/system/ibm-fixture.service:ro
+  - ${MQT_CORE_SLURM_WORKLOAD:?Set the IBM source directory}/test/slurm/ibm-fixture.conf:/etc/systemd/system/multi-user.target.d/ibm-fixture.conf:ro
 
 services:
   controller:
-    build: *provider-build
-  node1:
-    build: *provider-build
-  node2:
-    build: *provider-build
+    env_file: *device-environment
+    volumes:
+      - ${MQT_CORE_SLURM_WORKLOAD}/test/slurm/ibm-fixture.service:/etc/systemd/system/ibm-fixture.service:ro
+      - ${MQT_CORE_SLURM_WORKLOAD}/test/slurm/ibm-fixture.conf:/etc/systemd/system/multi-user.target.d/ibm-fixture.conf:ro
+      - ${MQT_CORE_SLURM_WORKLOAD}/test/slurm/qdmi.env:/runtime/qdmi.env:ro
+  login:
+    env_file: *device-environment
+  qan:
+    volumes: *service
