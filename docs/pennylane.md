@@ -27,15 +27,15 @@ def circuit():
 ```
 
 Supply `api_key`, `instance_crn`, and `backend_name` explicitly to override the
-environment. `IBMDevice(device=opened_device, wires=2)` adapts an existing QDMI
-session and rejects connection overrides. Importing the adapter and inspecting
-entry points do not open a session or submit work.
+catalogue configuration and environment defaults.
+`IBMDevice(device=opened_device, wires=2)` adapts an existing QDMI session and
+rejects connection overrides. Importing the adapter and inspecting entry points
+do not open a session or submit work.
 
-The wrapper uses environment credentials as explicit session parameters when
-`api_key` or `instance_crn` is omitted. An environment API key therefore takes
-precedence over a registered authentication file. To retain a native session's
-file selection, open it through the QDMI driver and pass it as `device`; see
-{doc}`api` for native credential precedence.
+Omitted connection arguments use the same native configuration as a direct QDMI
+session. A configured authentication file takes precedence over
+`IBM_QUANTUM_API_KEY`; see
+[session configuration](api.md#session-configuration).
 
 Wire labels map in their declared order to physical qubits starting at zero. For
 example, `wires=["control", "target"]` maps those labels to physical qubits 0
@@ -51,9 +51,10 @@ couplings.
 Set finite shots on the QNode with `shots=128`, or use `qml.set_shots`. Analytic
 execution and device-level `shots` are unsupported. Samples, counts,
 probabilities, expectation values, and variances are computed from returned
-samples. Shot vectors and parameter broadcasting may create several native jobs.
-Parameter-shift and finite-difference differentiation use ordinary sampled jobs;
-the device does not provide analytic gradients.
+samples. Programs with the same format and shot count share one sampler request,
+including equal shot-vector partitions. Different shot counts create separate
+jobs. Parameter-shift and finite-difference differentiation use ordinary sampled
+jobs; the device does not provide analytic gradients.
 
 PennyLane decomposes operations into the advertised native basis. The IBM
 adapter expresses single-qubit rotations using SX and RZ while preserving
@@ -63,8 +64,10 @@ placements. CNOT decomposes into CZ or ECR when CX is unavailable. Bound RZZ
 angles, including parameter-shift circuits, are folded into IBM's calibrated
 range with equivalent single-qubit corrections. Incompatible operations or
 placements fail before any job in a prepared batch is submitted. A submission or
-result failure attempts cancellation of earlier jobs; remote cancellation can
-race with completion, and submissions are never retried.
+result failure raises `PennyLaneExecutionError` with a retained `job` handle.
+Use that handle to inspect the batch or explicitly cancel earlier jobs;
+cancellation can race with completion. Automatic retries are disabled. Unknown
+submission outcomes are never automatically replaced.
 
 The adapter forwards compatible custom job settings through `job_parameters`;
 the native parameter contracts are documented in {doc}`api`. MQT Core 4's Python

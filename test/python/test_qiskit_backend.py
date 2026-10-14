@@ -35,10 +35,13 @@ from qiskit.circuit import Parameter
 from qiskit.providers import JobStatus
 from qiskit_service import open_backend
 
+from ibm import qdmi
 from ibm.qdmi import qiskit as adapter
 from ibm.qdmi.qiskit import IBMBackend
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from qiskit_service import RuntimeProxy
 
 
@@ -94,16 +97,40 @@ def test_entire_batch_validated_before_submission(runtime: RuntimeProxy, invalid
     assert not runtime.snapshot()["submissions"]
 
 
-def test_partial_submission_cancels_earlier_jobs(runtime: RuntimeProxy) -> None:
-    """The shared adapter cancels earlier jobs after a later submission fails."""
+def test_multi_program_submission_and_indexed_results(runtime: RuntimeProxy) -> None:
+    """Distinct circuits share one request and retain their input order."""
+    backend = open_backend(runtime)
+    zero = QuantumCircuit(1, 1, name="zero", metadata={"index": 0})
+    zero.measure(0, 0)
+    one = QuantumCircuit(1, 1, name="one", metadata={"index": 1})
+    one.x(0)
+    one.measure(0, 0)
+    job = backend.run([zero, one], shots=4, memory=True)
+    result = job.result()
+    assert result.get_counts(0) == {"0": 4}
+    assert result.get_counts(1) == {"1": 4}
+    results = result.results
+    assert results is not None
+    assert results[0].header["metadata"] == {"index": 0}
+    assert results[1].header["metadata"] == {"index": 1}
+    submissions = runtime.snapshot()["submissions"]
+    assert len(submissions) == 1
+    assert len(submissions[0]["params"]["pubs"]) == 2
+    retrieved = open_backend(runtime).device.retrieve_job_by_id(job.job_id())
+    assert retrieved.get_shots(0) == ["0"] * 4
+    assert retrieved.get_shots(1) == ["1"] * 4
+
+
+def test_failed_multi_program_submission_is_not_retried(runtime: RuntimeProxy) -> None:
+    """An uncertain native submission never creates a replacement execution."""
     backend = open_backend(runtime)
     circuit = QuantumCircuit(1, 1)
     circuit.measure(0, 0)
-    runtime.set_state("Queued", 2)
+    runtime.set_state("Queued", 1)
     with pytest.raises(JobSubmissionError):
-        backend.run([circuit, circuit, circuit], shots=4)
-    assert len(runtime.snapshot()["submissions"]) == 2
-    assert runtime.snapshot()["cancellations"] == ["synthetic-1"]
+        backend.run([circuit, circuit], shots=4)
+    assert len(runtime.snapshot()["submissions"]) == 1
+    assert not runtime.snapshot()["cancellations"]
 
 
 def test_status_cancellation_and_retrieval(runtime: RuntimeProxy) -> None:
@@ -127,13 +154,11 @@ def test_status_cancellation_and_retrieval(runtime: RuntimeProxy) -> None:
 
 @pytest.mark.parametrize("use_environment", [False, True])
 def test_session_overrides_and_existing_device(monkeypatch: pytest.MonkeyPatch, *, use_environment: bool) -> None:
-    """Forward explicit or environment values without opening a native session."""
+    """Forward explicit overrides and leave environment defaults to the native device."""
     device = Mock(spec=adapter.Device)
     opened = Mock(return_value=device)
     initialized = Mock(return_value=None)
-    registered = Mock()
     monkeypatch.setattr(adapter, "open_device", opened)
-    monkeypatch.setattr(adapter, "register_device", registered)
     monkeypatch.setattr(adapter.QDMIBackend, "__init__", initialized)
     monkeypatch.setenv("IBM_QUANTUM_API_KEY", "synthetic-key" if use_environment else "wrong-key")
     monkeypatch.setenv("IBM_QUANTUM_INSTANCE_CRN", CRN if use_environment else "wrong-crn")
@@ -145,12 +170,11 @@ def test_session_overrides_and_existing_device(monkeypatch: pytest.MonkeyPatch, 
         instance_crn=None if use_environment else CRN,
         backend_name=None if use_environment else "ibm_test",
     )
-    registered.assert_called_once_with("ibm.default")
     opened.assert_called_once_with(
         "ibm.default",
-        token="synthetic-key",  # ruff: ignore[hardcoded-password-func-arg] -- synthetic forwarding assertion
-        custom1="ibm_test",
-        custom2=CRN,
+        token=None if use_environment else "synthetic-key",
+        custom1=None if use_environment else "ibm_test",
+        custom2=None if use_environment else CRN,
         base_url="http://127.0.0.1:1",
         auth_url="http://127.0.0.1:1/auth",
     )
@@ -179,7 +203,7 @@ def test_generic_selection_required(runtime: RuntimeProxy, monkeypatch: pytest.M
     """Missing backend selection fails before authentication or metadata access."""
     monkeypatch.delenv("IBM_QUANTUM_BACKEND", raising=False)
     url = runtime.snapshot()["url"]
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError, match="Allocating QDMI session"):
         IBMBackend(api_key="synthetic-key", instance_crn=CRN, base_url=url, auth_url=url + "/auth")
     assert not runtime.snapshot()["requests"]
 
@@ -205,30 +229,45 @@ def test_inherited_factory(runtime: RuntimeProxy) -> None:
     assert backend.run(circuit, shots=3).result().get_counts() == {"1": 3}
 
 
-def test_administrator_default(runtime: RuntimeProxy) -> None:
+def test_administrator_default(runtime: RuntimeProxy, tmp_path: Path) -> None:
     """An isolated registry keeps configured defaults and explicit precedence."""
+    catalogue = tmp_path / "administrator.qdmi.json"
+    catalogue.write_text(
+        json.dumps({
+            "schema-version": 1,
+            "qdmi": {
+                "devices": [
+                    {
+                        "id": "site.ibm",
+                        "library": str(qdmi.IBM_QDMI_LIBRARY_PATH),
+                        "prefix": "IBM",
+                        "enabled": True,
+                        "session": {
+                            "custom1": "ibm_test",
+                            "token": "synthetic-key",
+                            "custom2": CRN,
+                            "base-url": runtime.snapshot()["url"],
+                            "auth-url": runtime.snapshot()["url"] + "/auth",
+                        },
+                    }
+                ]
+            },
+        }),
+        encoding="utf-8",
+    )
     script = """
 import os
-import sys
-from unittest.mock import Mock
-from mqt.core.qdmi import driver
-from ibm import qdmi
-from ibm.qdmi import qiskit as adapter
 from ibm.qdmi.qiskit import IBMBackend
-driver.register_device(driver.DeviceDefinition(
-    'ibm.default', qdmi.IBM_QDMI_LIBRARY_PATH, 'IBM', custom1='ibm_test',
-    token='synthetic-key', custom2=sys.argv[2],
-    base_url=sys.argv[1], auth_url=sys.argv[1] + '/auth',
-))
-assert IBMBackend().device.name() == 'ibm_test'
+assert IBMBackend(device_id="site.ibm").device.name() == 'ibm_test'
 os.environ['IBM_QUANTUM_BACKEND'] = 'wrong-backend'
-assert IBMBackend(backend_name='ibm_test').device.name() == 'ibm_test'
+assert IBMBackend(device_id="site.ibm", backend_name='ibm_test').device.name() == 'ibm_test'
 del os.environ['IBM_QUANTUM_BACKEND']
-assert IBMBackend().device.name() == 'ibm_test'
+assert IBMBackend(device_id="site.ibm").device.name() == 'ibm_test'
 """
     env = {
         key: value for key, value in os.environ.items() if not key.startswith(("IBM_QUANTUM_", "MQT_CORE_QDMI_CONFIG_"))
     }
+    env["MQT_CORE_QDMI_CONFIG_FILE"] = str(catalogue)
     result = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true] -- fixed script and loopback inputs
         [sys.executable, "-c", script, runtime.snapshot()["url"], CRN],
         env=env,

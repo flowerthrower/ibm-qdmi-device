@@ -7,7 +7,7 @@ through MQT Core's `QDMIBackend` and `QDMIJob`. Install the optional extra:
 uv pip install "ibm-qdmi[qiskit]"
 ```
 
-The extra uses `mqt-core[qiskit]~=4.0.0`. The base package remains usable
+The extra uses `mqt-core[qiskit]~=4.1.1`. The base package remains usable
 without Qiskit; `qiskit-ibm-runtime` is not required. Imports do not open
 sessions or contact IBM. Constructing a backend reads live metadata. Executing
 circuits creates paid quantum jobs. These examples are not executed during
@@ -27,10 +27,10 @@ backend = IBMBackend("ibm.berlin")
 # Generic selection: IBMBackend(backend_name="ibm_berlin")
 ```
 
-The generic `ibm.default` entry uses `backend_name`, `IBM_QUANTUM_BACKEND`, or
-the administrator's registered backend default, in that order. A missing
-selection fails during native session initialization before contacting IBM.
-Concrete catalogue entries select their named backend. Explicit `api_key`,
+The generic `ibm.default` entry uses an explicit `backend_name`, the
+administrator's catalogue backend, or `IBM_QUANTUM_BACKEND`, in that order. A
+missing selection fails during native session initialization before contacting
+IBM. Concrete catalogue entries select their named backend. Explicit `api_key`,
 `instance_crn`, and `backend_name` arguments override defaults. Normally omit
 `base_url` and `auth_url`; the native library derives the region from the CRN.
 Trusted endpoint overrides support applications such as loopback testing. See
@@ -39,13 +39,14 @@ Trusted endpoint overrides support applications such as loopback testing. See
 Use `IBMBackend(device=device)` to adapt an already-open IBM QDMI device. An
 open device is exclusive with connection overrides. `device_id` and `provider`
 may supply identity metadata, including through the inherited
-`IBMBackend.from_device_id()` factory for registered devices. Registration
-preserves administrator definitions in MQT Core's driver. Each normal
+`IBMBackend.from_device_id()` factory for registered devices. Installed manifest
+discovery preserves administrator definitions in MQT Core's driver. Each normal
 construction creates a fresh session.
 
-Credentials read from the environment become explicit native session parameters
-and override registered defaults. Adapt an already-open device to preserve
-authentication configured directly through QDMI.
+Omitted connection arguments use the catalogue configuration, then native
+environment defaults. A configured authentication file takes precedence over
+`IBM_QUANTUM_API_KEY`. These rules also apply when opening a device directly
+through QDMI; see [session configuration](api.md#session-configuration).
 
 ## Transpile and execute
 
@@ -83,11 +84,10 @@ preserved. Unsupported instructions, control flow, unbound parameters, and
 unsupported site tuples fail before submission. Scheduled delays are outside the
 current native contract.
 
-Each circuit creates one Sampler V2 job with a 60-second QPU execution cap,
-independent of queue time. This applies separately to every circuit in a batch.
-Direct QDMI callers can set the
-[custom execution-time parameter](api.md#jobs-and-results) and
-[dynamical-decoupling options](api.md#dynamical-decoupling). The Qiskit path
+Compatible circuits share one Sampler V2 job with a 60-second QPU execution cap,
+independent of queue time. The cap covers the complete native job. Direct QDMI
+callers can set the [custom execution-time parameter](api.md#jobs-and-results)
+and [dynamical-decoupling options](api.md#dynamical-decoupling). The Qiskit path
 retains the shared `shots` and `memory` execution options.
 
 ## Parameters and batches
@@ -116,10 +116,12 @@ second_memory = results.get_memory(1)
 Bind circuits yourself or supply one parameter mapping or ordered value sequence
 per circuit. The adapter validates and serializes the entire batch before its
 first submission. Serialization lives in `ibm.qdmi.serializers`; backend, job,
-and primitive orchestration use MQT Core. A later submission failure triggers
-cancellation attempts for earlier jobs. Submission is never automatically
-retried. A lost response can mean IBM accepted a job; inspect the platform
-before replacing it.
+and primitive orchestration use MQT Core. Compatible circuits with the common
+shot count share one ordered sampler request. A submission or result failure
+retains the batch handle on the execution exception for inspection and explicit
+cancellation. Automatic retries are disabled by default. `max_retries` allows
+bounded replacements of confirmed failed entries. A lost response can mean IBM
+accepted a job; unknown outcomes are never automatically replaced.
 
 ## Sampler and estimator
 

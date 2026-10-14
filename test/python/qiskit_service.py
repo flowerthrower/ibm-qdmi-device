@@ -50,11 +50,10 @@ class Runtime:
     fail_submission: int = 0
     state: str = "Completed"
     cancel_failure: bool = False
+    status_unavailable: bool = False
     invalid_results: bool = False
     mismatch_retrieval: bool = False
     result_reads: int = 0
-    job_reads: int = 0
-    inconsistent_state: bool = False
     executor_result: dict[str, Any] = field(default_factory=dict)
 
     def respond(self, path: str, body: bytes) -> tuple[int, Any]:
@@ -97,9 +96,8 @@ class Runtime:
                 samples = next(iter(data["results"][0]["data"].values()))["samples"]
                 samples[0] = "0x0"
             return 200, data
-        self.job_reads += 1
-        if self.inconsistent_state and self.job_reads == 2:
-            return 200, {**self.jobs[identifier], "state": {"status": "Queued"}}
+        if self.status_unavailable:
+            return 400, {}
         return 200, self.jobs[identifier]
 
     @staticmethod
@@ -109,26 +107,28 @@ class Runtime:
         Returns:
             Classified per-register samples in deliberately reversed key order.
         """
-        source, parameters, shots = request["params"]["pubs"][0]
-        assert parameters is None
-        circuit = qasm3.loads(source)
-        memory = (
-            BasicSimulator()
-            .run(circuit.decompose(reps=4), shots=shots, memory=True, seed_simulator=7)
-            .result()
-            .get_memory()
-        )
-        data = {}
-        for register in reversed(circuit.cregs):
-            samples = []
-            for sample in memory:
-                integer = int(sample.replace(" ", ""), 2)
-                value = sum(
-                    ((integer >> circuit.find_bit(bit).index) & 1) << index for index, bit in enumerate(register)
-                )
-                samples.append(hex(value))
-            data[register.name] = {"samples": samples, "num_bits": len(register)}
-        return {"results": [{"data": data}]}
+        outputs = []
+        for source, parameters, shots in request["params"]["pubs"]:
+            assert parameters is None
+            circuit = qasm3.loads(source)
+            memory = (
+                BasicSimulator()
+                .run(circuit.decompose(reps=4), shots=shots, memory=True, seed_simulator=7)
+                .result()
+                .get_memory()
+            )
+            data = {}
+            for register in reversed(circuit.cregs):
+                samples = []
+                for sample in memory:
+                    integer = int(sample.replace(" ", ""), 2)
+                    value = sum(
+                        ((integer >> circuit.find_bit(bit).index) & 1) << index for index, bit in enumerate(register)
+                    )
+                    samples.append(hex(value))
+                data[register.name] = {"samples": samples, "num_bits": len(register)}
+            outputs.append({"data": data})
+        return {"results": outputs}
 
 
 def configure(service: Service) -> Runtime:
@@ -200,9 +200,9 @@ class RuntimeServer:
         self.runtime.cancel_failure = category == "cancellation"
         if self.runtime.cancel_failure:
             self.runtime.state = "Queued"
+        self.runtime.status_unavailable = category == "status"
         self.runtime.invalid_results = category == "results"
         self.runtime.mismatch_retrieval = category == "retrieval"
-        self.runtime.inconsistent_state = category == "status-regression"
         if category == "authentication":
             self.runtime.service.errors["auth"] = 401
 

@@ -28,7 +28,7 @@ license = "Apache-2.0 WITH LLVM-exception AND MIT AND curl AND OpenSSL"
 license-files = [ "LICENSE", "licenses/LICENSE-*" ]
 requires-python = ">=3.11"
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Information Technology",
   "Intended Audience :: Science/Research",
   "Natural Language :: English",
@@ -58,9 +58,9 @@ name = "Lukas Burgholzer"
 email = "lukas@mq.sc"
 
 [project.optional-dependencies]
-executor = [ "mqt-core[qiskit]~=4.0.0", "qiskit-ibm-runtime~=0.50.0" ]
-pennylane = [ "mqt-core[pennylane,qiskit]~=4.0.0" ]
-qiskit = [ "mqt-core[qiskit]~=4.0.0", "qiskit-algorithms>=0.4" ]
+executor = [ "mqt-core[qiskit]~=4.1.1", "qiskit-ibm-runtime~=0.50.0" ]
+pennylane = [ "mqt-core[pennylane,qiskit]~=4.1.1" ]
+qiskit = [ "mqt-core[qiskit]~=4.1.1", "qiskit-algorithms>=0.4" ]
 
 [project.urls]
 Documentation = "https://ibm-qdmi-device.readthedocs.io/en/latest/"
@@ -71,6 +71,9 @@ Issues = "https://github.com/munich-quantum-software/ibm-qdmi-device/issues"
 ibm-estimator = "ibm.qdmi.estimator:main"
 ibm-sampler = "ibm.qdmi.sampler:main"
 ibm-qdmi = "ibm.qdmi.__main__:main"
+
+[project.entry-points."mqt.core.qdmi.manifests"]
+ibm = "ibm.qdmi"
 
 [project.entry-points."pennylane.plugins"]
 "ibm.default" = "ibm.qdmi.pennylane:IBMDevice"
@@ -88,7 +91,7 @@ dev = [
 ]
 test = [
   "cryptography>=42",
-  "mqt-core[pennylane,qiskit]~=4.0.0",
+  "mqt-core[pennylane,qiskit]~=4.1.1",
   "pytest>=9.1.1",
   "pytest-cov>=7.1",
   "pytest-sugar>=1.1.1",
@@ -119,7 +122,7 @@ examples = [
   { include-group = "test" },
   "cmake>=3.24",
   "mqt-bench>=2.2.2",
-  "mqt-core[pennylane,qiskit]~=4.0.0",
+  "mqt-core[pennylane,qiskit]~=4.1.1",
   "ninja>=1.5",
   "qiskit-algorithms>=0.4",
 ]

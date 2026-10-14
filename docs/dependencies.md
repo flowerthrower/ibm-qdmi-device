@@ -13,7 +13,7 @@ CMake downloads the configured sources.
 
 | Dependency    | Default version | Purpose                                   |
 | :------------ | :-------------- | :---------------------------------------- |
-| QDMI          | 1.3.3           | Interface headers and device declarations |
+| QDMI          | 1.4.0           | Interface headers and device declarations |
 | nlohmann/json | 3.12.0          | JSON parsing and serialization            |
 | CPR           | 1.14.2          | HTTP requests through libcurl             |
 | GoogleTest    | 1.17.0          | Native tests, when enabled                |
@@ -34,9 +34,9 @@ project's wheel.
 
 | Extra       | Requirement                                             | Purpose                                     |
 | :---------- | :------------------------------------------------------ | :------------------------------------------ |
-| `qiskit`    | `mqt-core[qiskit]~=4.0.0`                               | Qiskit backend and primitives               |
-| `executor`  | `mqt-core[qiskit]~=4.0.0`, `qiskit-ibm-runtime~=0.50.0` | Executor programs through QDMI              |
-| `pennylane` | `mqt-core[pennylane,qiskit]~=4.0.0`                     | PennyLane devices and circuit serialization |
+| `qiskit`    | `mqt-core[qiskit]~=4.1.1`                               | Qiskit backend and primitives               |
+| `executor`  | `mqt-core[qiskit]~=4.1.1`, `qiskit-ibm-runtime~=0.50.0` | Executor programs through QDMI              |
+| `pennylane` | `mqt-core[pennylane,qiskit]~=4.1.1`                     | PennyLane devices and circuit serialization |
 
 Follow [Python installation](installation.md#python-package) to select extras.
 MQT Core defines their transitive Qiskit and PennyLane requirements.

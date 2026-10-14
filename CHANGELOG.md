@@ -10,6 +10,25 @@ releases may include breaking changes.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-14
+
+### Fixed
+
+- 🐛 Select calibrated layouts for live quantum checks. ([#66])
+  ([**@marcelwa**])
+- 🐛 Enforce Sampler execution limits and consistent QDMI credential precedence.
+  ([#66]) ([**@burgholzer**])
+
+### Changed
+
+- ⬆️ Update MQT Core to 4.1.1 with installed manifest discovery. ([#66])
+  ([**@marcelwa**], [**@denialhaag**])
+- ⬆️ Update QDMI to 1.4.0 with native multi-program jobs, indexed results, and
+  export control. ([#66]) ([**@marcelwa**], [**@denialhaag**])
+- 👷 Enable testing on Python 3.15 ([#63]) ([**@denialhaag**])
+
+## [0.1.1] - 2026-10-06
+
 ### Fixed
 
 - 🐛 Ship license texts for libcurl, cpr, nlohmann/json, and OpenSSL bundled in
@@ -21,7 +40,6 @@ releases may include breaking changes.
 
 ### Changed
 
-- 👷 Enable testing on Python 3.15 ([#63]) ([**@denialhaag**])
 - 📝 Document installation from PyPI, keep source builds as an alternative, and
   list the supported wheel platforms. ([#60]) ([**@marcelwa**])
 
@@ -36,17 +54,21 @@ _This is the initial release of the IBM QDMI Device._
 
 <!-- PR links -->
 
+[#66]: https://github.com/munich-quantum-software/ibm-qdmi-device/pull/66
 [#63]: https://github.com/munich-quantum-software/ibm-qdmi-device/pull/63
 [#59]: https://github.com/munich-quantum-software/ibm-qdmi-device/pull/59
 [#60]: https://github.com/munich-quantum-software/ibm-qdmi-device/pull/60
 
 <!-- Version links -->
 
-[unreleased]: https://github.com/munich-quantum-software/ibm-qdmi-device/compare/v0.1.0...HEAD
+[unreleased]: https://github.com/munich-quantum-software/ibm-qdmi-device/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/munich-quantum-software/ibm-qdmi-device/releases/tag/v1.0.0
+[0.1.1]: https://github.com/munich-quantum-software/ibm-qdmi-device/releases/tag/v0.1.1
 [0.1.0]: https://github.com/munich-quantum-software/ibm-qdmi-device/releases/tag/v0.1.0
 
 <!-- Contributor -->
 
+[**@burgholzer**]: https://github.com/burgholzer
 [**@marcelwa**]: https://github.com/marcelwa
 [**@denialhaag**]: https://github.com/denialhaag
 
